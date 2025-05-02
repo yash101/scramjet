@@ -8,33 +8,31 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
-# Attempt to find LMDB via pkg-config
+# Attempt to find RocksDB via pkg-config
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(PC_LMDB lmdb)
+pkg_check_modules(PC_ROCKSDB rocksdb)
+set(DISABLE_WARNING_AS_ERROR ON)
 
-if(PC_LMDB_FOUND)
-  message(STATUS "Found LMDB via pkg-config: ${PC_LMDB_INCLUDE_DIRS}, libs: ${PC_LMDB_LIBRARIES}")
-  set(LMDB_INCLUDE_DIRS ${PC_LMDB_INCLUDE_DIRS})
-  set(LMDB_LIBRARIES ${PC_LMDB_LIBRARIES})
+# set(DISABLE_WARNING_AS_ERROR ON)
+if(PC_ROCKSDB_FOUND)
+  message(STATUS "Found RocksDB via pkg-config: ${PC_ROCKSDB_INCLUDE_DIRS}, libs: ${PC_ROCKSDB_LIBRARIES}")
+  set(ROCKSDB_INCLUDE_DIRS ${PC_ROCKSDB_INCLUDE_DIRS})
+  set(ROCKSDB_LIBRARIES ${PC_ROCKSDB_LIBRARIES})
 else()
-  message(STATUS "LMDB not found via pkg-config, fetching embedded vendor copy...")
+  message(STATUS "RocksDB not found via pkg-config, fetching embedded vendor copy...")
   include(FetchContent)
   FetchContent_Declare(
-    lmdb
-    GIT_REPOSITORY https://github.com/LMDB/lmdb.git
-    GIT_TAG        "LMDB_0.9.31"
+    rocksdb
+    GIT_REPOSITORY https://github.com/facebook/rocksdb.git
+    GIT_TAG        "v10.2.1"
+    GIT_SHALLOW    TRUE
   )
-  FetchContent_MakeAvailable(lmdb)
-  # lmdb tree places sources under libraries/liblmdb
-  set(LMDB_INCLUDE_DIRS ${lmdb_SOURCE_DIR}/libraries/liblmdb)
-  add_library(lmdb_vendor STATIC
-    ${lmdb_SOURCE_DIR}/libraries/liblmdb/mdb.c
-  )
-  target_include_directories(lmdb_vendor PUBLIC ${LMDB_INCLUDE_DIRS})
-  set(LMDB_LIBRARIES lmdb_vendor)
+  FetchContent_MakeAvailable(rocksdb)
+  set(ROCKSDB_LIBRARIES rocksdb)
+  target_compile_options(rocksdb PRIVATE -Wno-unused-but-set-variable)
 endif()
 
-# Common include directories
-include_directories(${LMDB_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+# Common include directories
 add_subdirectory(src)
